@@ -1,3 +1,5 @@
 # Set allowlist to `false` to allow anyone; otherwise add entries such as "@user:example.com"
 allowlist: []
+# This is the path that you want the plugin to append messages to. It can be an absolute path or
+# a relative path from the maubot directory.
 output_file: output.md
