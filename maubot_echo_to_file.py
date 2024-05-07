@@ -3,11 +3,13 @@ from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
 from maubot import Plugin, MessageEvent
 from maubot.handlers import event
 from mautrix.types import EventType, MessageEvent
+from datetime import datetime, timezone
 
 
 class Config(BaseProxyConfig):
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         helper.copy("allowlist")
+        helper.copy("output_file")
 
 
 class EchoToFileBot(Plugin):
@@ -28,5 +30,11 @@ class EchoToFileBot(Plugin):
         if not self.is_allowed(evt.sender):
             self.log.warn(f"stranger danger: sender={evt.sender}")
             return
-        self.log.info("received message", extra={"sender": evt.sender, "body": evt.content.body})
+        with open(self.config["output_file"], "a") as outfile:
+            # TODO use origin timestamp instead
+            ts = datetime.now(timezone.utc).astimezone()
+            outfile.write(ts.strftime("%Y-%m-%d %H:%M"))
+            outfile.write(": ")
+            outfile.write(evt.content.body)
+            outfile.write("\n\n")
 
