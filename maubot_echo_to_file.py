@@ -37,4 +37,5 @@ class EchoToFileBot(Plugin):
             outfile.write(": ")
             outfile.write(evt.content.body)
             outfile.write("\n\n")
+        await evt.mark_read()
 
