@@ -2,14 +2,19 @@ from typing import Type
 from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
 from maubot import Plugin, MessageEvent
 from maubot.handlers import event
-from mautrix.types import EventType, MessageEvent
+from mautrix.types import EventType, MessageEvent, MediaMessageEventContent
+from mautrix.types.event.message import BaseFileInfo, MessageType
 from datetime import datetime, timezone
+from pathlib import Path
+from uuid import uuid4
+from mimetypes import guess_extension
 
 
 class Config(BaseProxyConfig):
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         helper.copy("allowlist")
         helper.copy("output_file")
+        helper.copy("attachment_dir")
 
 
 class EchoToFileBot(Plugin):
@@ -30,12 +35,40 @@ class EchoToFileBot(Plugin):
         if not self.is_allowed(evt.sender):
             self.log.warn(f"stranger danger: sender={evt.sender}")
             return
+        outfile_path = Path(self.config["output_file"])
+
+        # TODO use origin timestamp instead
+        ts = datetime.now(timezone.utc).astimezone()
+        entry = evt.content.body
+
+        if isinstance(evt.content, MediaMessageEventContent):
+            outfile_dir = outfile_path.parent
+            attachments_path = Path(self.config["attachment_dir"])
+
+            fileid = uuid4()
+            filename = str(fileid)
+            if isinstance(evt.content.info, BaseFileInfo) and evt.content.info.mimetype:
+                ext = guess_extension(evt.content.info.mimetype)
+                if ext:
+                    filename += ext
+            
+            filepath = attachments_path.joinpath(filename)
+
+            if evt.content.url:
+                data = await self.client.download_media(evt.content.url)
+                filepath.write_bytes(data)
+            
+            if filepath.exists():
+                entry = ""
+                if evt.content.msgtype == MessageType.IMAGE:
+                    entry = "!"
+                # TODO escaping
+                entry += f"[{evt.content.body}]({filepath.relative_to(outfile_dir)})"
+                
+        
+        text = f"{ts.strftime('%Y-%m-%d %H:%M')}: {entry}\n\n"
+
         with open(self.config["output_file"], "a") as outfile:
-            # TODO use origin timestamp instead
-            ts = datetime.now(timezone.utc).astimezone()
-            outfile.write(ts.strftime("%Y-%m-%d %H:%M"))
-            outfile.write(": ")
-            outfile.write(evt.content.body)
-            outfile.write("\n\n")
+            outfile.write(text)
         await evt.mark_read()
 
