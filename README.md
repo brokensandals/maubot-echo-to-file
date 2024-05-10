@@ -3,11 +3,15 @@ This is a very basic [maubot](https://github.com/maubot/maubot) plugin that writ
 Use case: using Matrix for note-taking.
 You send quick notes to the bot's account, it persists them.
 
-Currently it only handles text messages.
-They're appended to a file at a configured path.
-Messages are prepended with a timestamp; the format is currently hardcoded.
+Messages are appended to a file at a configured path.
+They're prepended with a timestamp; the format is currently hardcoded.
+
+Attachments, both encrypted and unencrypted, are supported.
+The decrypted attachment is stored in a configured directory; the filename is a UUID and a file extension guessed based on mimetype.
+A message is appended to the main file linking to the attachment using markdown syntax (image links are used for images; normal links are used for all other files).
 
 You can and probably should configure it to only record messages from specific users.
+No attempt is made to protect from markdown injection attacks.
 
 # Installation
 

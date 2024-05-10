@@ -4,6 +4,7 @@ from maubot import Plugin, MessageEvent
 from maubot.handlers import event
 from mautrix.types import EventType, MessageEvent, MediaMessageEventContent
 from mautrix.types.event.message import BaseFileInfo, MessageType
+from mautrix.crypto.attachments import decrypt_attachment
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -54,11 +55,15 @@ class EchoToFileBot(Plugin):
             
             filepath = attachments_path.joinpath(filename)
 
+            data = None
             if evt.content.url:
                 data = await self.client.download_media(evt.content.url)
-                filepath.write_bytes(data)
+            elif evt.content.file and evt.content.file.url:
+                ciphertext = await self.client.download_media(evt.content.file.url)
+                data = decrypt_attachment(ciphertext, evt.content.file.key.key, evt.content.file.hashes["sha256"], evt.content.file.iv)
             
-            if filepath.exists():
+            if data is not None:
+                filepath.write_bytes(data)
                 entry = ""
                 if evt.content.msgtype == MessageType.IMAGE:
                     entry = "!"
